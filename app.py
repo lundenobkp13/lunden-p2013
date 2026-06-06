@@ -506,24 +506,16 @@ def sync_fogis():
 
 @app.route("/debug/matcher")
 def debug_matcher():
-    if "fogis_cookies" not in session:
-        return redirect(url_for("login"))
+    u = request.args.get("u", "")
+    p = request.args.get("p", "")
+    if not u or not p:
+        return {"fel": "Ange ?u=användarnamn&p=lösenord i URL:en"}
     try:
-        client = FogisApiClient(cookies=session["fogis_cookies"])
-        # Prova att hämta med explicit inloggning istället
+        client = FogisApiClient(username=u, password=p)
         alla = client.fetch_matches_list_json()
         return {"antal": len(alla), "forsta_3": alla[:3]}
     except Exception as e:
-        # Prova re-login
-        try:
-            client2 = FogisApiClient(
-                username=request.args.get("u",""),
-                password=request.args.get("p","")
-            )
-            alla2 = client2.fetch_matches_list_json()
-            return {"via_login": True, "antal": len(alla2), "forsta_3": alla2[:3]}
-        except Exception as e2:
-            return {"fel": str(e), "fel2": str(e2)}
+        return {"fel": str(e)}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
