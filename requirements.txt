@@ -1,5 +1,5 @@
 flask>=3.0.0
-fogis-api-client-timmyBird>=0.0.6
+fogis-api-client-timmyBird>=0.7.4
 gunicorn>=21.2.0
 requests>=2.31.0
 beautifulsoup4>=4.12.0
