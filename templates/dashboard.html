@@ -373,7 +373,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 
 <!-- ═══ Narvaro (laget.se) ═══ -->
 <section class="section" id="sec-narvaro">
-  <p class="stitle">Narvaro – laget.se</p>
+  <p class="stitle">Träningsnärvaro</p>
 
   {% if synkad %}
   <div class="info">Synkad <strong>{{ synkad[:16]|replace('T',' ') }}</strong> · Klicka Admin → Synka narvaro for att uppdatera.</div>
@@ -418,23 +418,20 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   {% endif %}
 </section>
 
+<!-- ═══ Planeringsverktyg ═══ -->
 
 <!-- ═══ Spelarstatistik ═══ -->
 <section class="section" id="sec-spelstat">
   <p class="stitle">Spelarstatistik 2026</p>
   <div class="info">
-    Mal, assist och kort per spelare – alla serier, Fair Play och traningsmatcher.
-    Uppdateras manuellt via MinFotboll.
+    Mål, assist och kort per spelare – alla serier, Fair Play och träningsmatcher.
   </div>
 
-  <!-- Serie-filter flikar -->
+  <!-- Serie-filter -->
   <div class="topnav" id="spelstat-filter" style="margin-bottom:12px;flex-wrap:wrap">
     <button class="tnbtn active" onclick="filterStat('alla')" id="sf-alla">Alla</button>
     {% for sid, sinfo in serier.items() %}
-    <button class="tnbtn" onclick="filterStat('{{ sid }}')" id="sf-{{ sid }}"
-      style="border-left:3px solid {{ sinfo.get('farg', sinfo.get('\u00e4rg','#888')) if 'farg' in sinfo else '#888' }}">
-      {{ sinfo.etikett }}
-    </button>
+    <button class="tnbtn" onclick="filterStat('{{ sid }}')" id="sf-{{ sid }}">{{ sinfo.etikett }}</button>
     {% endfor %}
   </div>
 
@@ -445,11 +442,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
       <tr>
         <th>#</th>
         <th style="text-align:left">Spelare</th>
-        <th title="Mal">&#9917;</th>
-        <th title="Assist" style="color:var(--muted)">&#127147;</th>
-        <th title="Gult kort">&#129000;</th>
-        <th title="Rott kort">&#128997;</th>
-        <th title="Spelade matcher" style="color:var(--muted)">M</th>
+        <th title="Mål">⚽</th>
+        <th title="Assist" style="color:var(--muted)">🅰</th>
+        <th title="Gult kort">🟨</th>
+        <th title="Rött kort">🟥</th>
+        <th title="Matcher" style="color:var(--muted)">M</th>
         <th>Lag</th>
       </tr>
     </thead>
@@ -457,35 +454,19 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
     {% for sp in spelstat %}
     <tr data-serier="{{ sp.serier.keys()|list|tojson }}">
       <td>{{ loop.index }}</td>
-      <td style="text-align:left;font-weight:{% if sp.mal_tot > 0 %}600{% else %}400{% endif %}">
-        {{ sp.namn }}
-      </td>
+      <td style="text-align:left;font-weight:{% if sp.mal_tot > 0 %}600{% else %}400{% endif %}">{{ sp.namn }}</td>
       <td class="tot">{{ sp.mal_tot if sp.mal_tot > 0 else '-' }}</td>
       <td style="color:var(--muted);font-size:.85rem">{{ sp.assist_tot if sp.assist_tot > 0 else '-' }}</td>
       <td>{% if sp.gult_tot %}<span style="color:#f0c040;font-weight:700">{{ sp.gult_tot }}</span>{% else %}-{% endif %}</td>
       <td>{% if sp.rott_tot %}<span style="color:var(--loss);font-weight:700">{{ sp.rott_tot }}</span>{% else %}-{% endif %}</td>
       <td style="color:var(--muted);font-size:.8rem">{{ sp.matcher_tot }}</td>
       <td>
-        {% for sid, sv in sp.serier.items() %}
-        {% if sv.mal > 0 or sv.matcher > 0 %}
-        <span style="display:inline-block;padding:1px 5px;border-radius:3px;
-          font-size:.6rem;margin:1px;background:
-          {% if sid=='latt_e' %}#a8e06340
-          {% elif sid=='latt_c' %}#7ec8e340
-          {% elif sid=='medel_a' %}#f0a86840
-          {% elif sid=='fair_play' %}#c084fc40
-          {% else %}#94a3b840{% endif %};
-          border-left:2px solid
-          {% if sid=='latt_e' %}#a8e063
-          {% elif sid=='latt_c' %}#7ec8e3
-          {% elif sid=='medel_a' %}#f0a868
-          {% elif sid=='fair_play' %}#c084fc
-          {% else %}#94a3b8{% endif %}">
-          {{ serier[sid].etikett if sid in serier else sid }}
-          {% if sv.mal > 0 %} {{ sv.mal }}&#9917;{% endif %}
-        </span>
-        {% endif %}
-        {% endfor %}
+        {% for sid, sv in sp.serier.items() %}{% if sv.mal > 0 or sv.matcher > 0 %}
+        <span style="display:inline-block;padding:1px 5px;border-radius:3px;font-size:.6rem;margin:1px;
+          background:{% if sid=='latt_e' %}#a8e06330{% elif sid=='latt_c' %}#7ec8e330{% elif sid=='medel_a' %}#f0a86830{% elif sid=='fair_play' %}#c084fc30{% else %}#94a3b830{% endif %};
+          border-left:2px solid {% if sid=='latt_e' %}#a8e063{% elif sid=='latt_c' %}#7ec8e3{% elif sid=='medel_a' %}#f0a868{% elif sid=='fair_play' %}#c084fc{% else %}#94a3b8{% endif %}">
+          {{ serier[sid].etikett if sid in serier else sid }}{% if sv.mal > 0 %} {{ sv.mal }}⚽{% endif %}
+        </span>{% endif %}{% endfor %}
       </td>
     </tr>
     {% endfor %}
@@ -497,7 +478,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   {% endif %}
 </section>
 
-<!-- ═══ Planeringsverktyg ═══ -->
 <section class="section" id="sec-planering">
   <p class="stitle">Matchplanering</p>
   <div class="info">
@@ -639,7 +619,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
     <span class="ticon">📊</span><span>Narvaro</span>
   </button>
   <button class="titem" onclick="showSec('spelstat')" id="tb-spelstat">
-    <span class="ticon">&#9917;</span><span>Stat</span>
+    <span class="ticon">⚽</span><span>Stat</span>
   </button>
   <button class="titem" onclick="showSec('planering')" id="tb-planering">
     <span class="ticon">🗓</span><span>Plan</span>
