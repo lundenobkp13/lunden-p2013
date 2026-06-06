@@ -37,7 +37,10 @@ app.secret_key = os.environ.get("SECRET_KEY", "lunden-obk-p2013-v2-byt-mig")
 
 # ── Konfiguration ─────────────────────────────────────────────────────────────
 
-CLUB_NAME  = "Lunden"
+CLUB_NAME = "Lunden"
+
+LAGNAMN = ["Lunden Överas BK Vit", "Lunden Överas BK Gron", "Lunden Överas BK Svart", "Lunden Överas BK"]
+
 LAGETSE_SLUG = os.environ.get("LAGETSE_SLUG", "Lundenobkpf13")   # din laget.se-URL
 
 SERIER = {
@@ -500,6 +503,17 @@ def sync_fogis():
     cached["fogis_spelare"] = payload.get("spelare", [])
     save_data(cached)
     return jsonify({"ok": True})
+
+@app.route("/debug/matcher")
+def debug_matcher():
+    if "fogis_cookies" not in session:
+        return redirect(url_for("login"))
+    try:
+        client = FogisApiClient(cookies=session["fogis_cookies"])
+        alla = client.fetch_matches_list_json()
+        return {"antal": len(alla), "forsta_3": alla[:3]}
+    except Exception as e:
+        return {"fel": str(e)}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
