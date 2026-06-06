@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Lunden OBK - Logga in</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Lunden OBK P2013</title>
+<style>
+*[box-sizing:border-box;margin:0;padding:0]
+body{font-family:'DM Sans',sans-serif;background:#141f16;color:#eef2e6;
+  display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:radial-gradient(ellipse 120% 80% at 50% 0%,#2a5a3a 0%transparent 60%),#141f16}
+.card{width:100%;max-width:380px;background:rgba(255,255,255,.055);border:1px solid rgba(168,224,99,.18);
+  border-radius:14px;padding:36px 28px 32px;backdrop-filter:blur(12px)}
+.badge{width:52px;height:52px;margin:0 auto 20px;background:linear-gradient(135deg,#a8e063,#5aad30);
+  border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px}
+h1{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:2px;color:#a8e063;text-align:center}
+.sub{text-align:center;color:rgba(238,242,230,.5);font-size:.8rem;margin-top:6px;margin-bottom:28px}
+.flash{background:rgba(240,128,128,.12);border:1px solid rgba(240,128,128,.3);color:#f08080;
+  border-radius:10px;padding:11px 14px;font-size:.82rem;margin-bottom:18px}
+label{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:rgba(238,242,230,.5);margin-bottom:6px}
+input{width:100%;padding:13px 14px;background:rgba(0,0,0,.25);border:1px solid rgba(168,224,99,.18);
+  border-radius:10px;color:#eef2e6;font-size:1rem;-webkit-appearance:none;box-sizing:border-box}
+input:focus{outline:none;border-color:#a8e063}
+input::placeholder{color:rgba(238,242,230,.5)}
+.field{margin-bottom:16px}
+button[type=submit]{width:100%;margin-top:8px;padding:15px;background:#a8e063;color:#162b1e;
+  font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:2px;border:none;
+  border-radius:10px;cursor:pointer}
+.hint{text-align:center;color:rgba(238,242,230,.5);font-size:.72rem;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="badge">&#x4991;</div>
+  <h1>Lunden OBK</h1>
+  <p class="sub">P2013 - Statistik &amp; Planering - Logga in med Fogis</p>
+  {% for msg in get_flashed_messages() %}<div class="flash">{{ msg }}</div>{% endfor %}
+  <form method="POST" autocomplete="on">
+    <div class="field">
+      <label>Fogis e-post</label>
+      <input type="email" name="username" placeholder="din@email.se" autocomplete="username" autocapitalize="none" required>
+    </div>
+    <div class="field">
+      <label>Losenord</label>
+      <input type="password" name="password" placeholder="Losenord" autocomplete="current-password" required>
+    </div>
+    <button type="submit">Logga in</button>
+  </form>
+  <p class="hint">Samma uppgifter som pa fogis.se</p>
+</div>
+</body>
+</html>
