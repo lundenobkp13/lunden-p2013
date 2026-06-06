@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -236,6 +237,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   {% endfor %}
   <button class="tnbtn" onclick="showSec('spelare')" id="tn-spelare">Spelare</button>
   <button class="tnbtn" onclick="showSec('narvaro')" id="tn-narvaro">Narvaro</button>
+  <button class="tnbtn" onclick="showSec('spelstat')" id="tn-spelstat">&#9917; Stat</button>
   <button class="tnbtn" onclick="showSec('planering')" id="tn-planering">Planering</button>
   <button class="tnbtn" onclick="showSec('admin')" id="tn-admin">⚙ Admin</button>
 </nav>
@@ -335,7 +337,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
         <th>#</th><th>Spelare</th>
         {% for sid, sinfo in serier.items() %}<th>{{ sinfo.etikett }}</th>{% endfor %}
         <th>Tot</th>
-        <th>Traningsnarvaro%</th>
+        <th>Narvaro%</th>
       </tr>
     </thead>
     <tbody>
@@ -413,6 +415,85 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
     </tbody>
   </table>
   </div>
+  {% endif %}
+</section>
+
+
+<!-- ═══ Spelarstatistik ═══ -->
+<section class="section" id="sec-spelstat">
+  <p class="stitle">Spelarstatistik 2026</p>
+  <div class="info">
+    Mal, assist och kort per spelare – alla serier, Fair Play och traningsmatcher.
+    Uppdateras manuellt via MinFotboll.
+  </div>
+
+  <!-- Serie-filter flikar -->
+  <div class="topnav" id="spelstat-filter" style="margin-bottom:12px;flex-wrap:wrap">
+    <button class="tnbtn active" onclick="filterStat('alla')" id="sf-alla">Alla</button>
+    {% for sid, sinfo in serier.items() %}
+    <button class="tnbtn" onclick="filterStat('{{ sid }}')" id="sf-{{ sid }}"
+      style="border-left:3px solid {{ sinfo.get('farg', sinfo.get('\u00e4rg','#888')) if 'farg' in sinfo else '#888' }}">
+      {{ sinfo.etikett }}
+    </button>
+    {% endfor %}
+  </div>
+
+  {% if spelstat %}
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+  <table class="stbl" id="spelstat-tabell">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th style="text-align:left">Spelare</th>
+        <th title="Mal">&#9917;</th>
+        <th title="Assist" style="color:var(--muted)">&#127147;</th>
+        <th title="Gult kort">&#129000;</th>
+        <th title="Rott kort">&#128997;</th>
+        <th title="Spelade matcher" style="color:var(--muted)">M</th>
+        <th>Lag</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for sp in spelstat %}
+    <tr data-serier="{{ sp.serier.keys()|list|tojson }}">
+      <td>{{ loop.index }}</td>
+      <td style="text-align:left;font-weight:{% if sp.mal_tot > 0 %}600{% else %}400{% endif %}">
+        {{ sp.namn }}
+      </td>
+      <td class="tot">{{ sp.mal_tot if sp.mal_tot > 0 else '-' }}</td>
+      <td style="color:var(--muted);font-size:.85rem">{{ sp.assist_tot if sp.assist_tot > 0 else '-' }}</td>
+      <td>{% if sp.gult_tot %}<span style="color:#f0c040;font-weight:700">{{ sp.gult_tot }}</span>{% else %}-{% endif %}</td>
+      <td>{% if sp.rott_tot %}<span style="color:var(--loss);font-weight:700">{{ sp.rott_tot }}</span>{% else %}-{% endif %}</td>
+      <td style="color:var(--muted);font-size:.8rem">{{ sp.matcher_tot }}</td>
+      <td>
+        {% for sid, sv in sp.serier.items() %}
+        {% if sv.mal > 0 or sv.matcher > 0 %}
+        <span style="display:inline-block;padding:1px 5px;border-radius:3px;
+          font-size:.6rem;margin:1px;background:
+          {% if sid=='latt_e' %}#a8e06340
+          {% elif sid=='latt_c' %}#7ec8e340
+          {% elif sid=='medel_a' %}#f0a86840
+          {% elif sid=='fair_play' %}#c084fc40
+          {% else %}#94a3b840{% endif %};
+          border-left:2px solid
+          {% if sid=='latt_e' %}#a8e063
+          {% elif sid=='latt_c' %}#7ec8e3
+          {% elif sid=='medel_a' %}#f0a868
+          {% elif sid=='fair_play' %}#c084fc
+          {% else %}#94a3b8{% endif %}">
+          {{ serier[sid].etikett if sid in serier else sid }}
+          {% if sv.mal > 0 %} {{ sv.mal }}&#9917;{% endif %}
+        </span>
+        {% endif %}
+        {% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="empty">Ingen statistik inladdad.</p>
   {% endif %}
 </section>
 
@@ -557,6 +638,9 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   <button class="titem" onclick="showSec('narvaro')" id="tb-narvaro">
     <span class="ticon">📊</span><span>Narvaro</span>
   </button>
+  <button class="titem" onclick="showSec('spelstat')" id="tb-spelstat">
+    <span class="ticon">&#9917;</span><span>Stat</span>
+  </button>
   <button class="titem" onclick="showSec('planering')" id="tb-planering">
     <span class="ticon">🗓</span><span>Plan</span>
   </button>
@@ -649,7 +733,21 @@ async function rensaPlanering() {
 {% for km in kommande_matcher %}
 uppdateraSummary('{{ km.id }}');
 {% endfor %}
+
+// Spelstat filter
+function filterStat(serie) {
+  document.querySelectorAll('[id^="sf-"]').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('sf-' + serie);
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('#spelstat-tabell tbody tr').forEach(tr => {
+    if (serie === 'alla') { tr.style.display = ''; return; }
+    try {
+      const serier = JSON.parse(tr.dataset.serier || '[]');
+      tr.style.display = serier.includes(serie) ? '' : 'none';
+    } catch(e) { tr.style.display = ''; }
+  });
+}
+
 </script>
 </body>
 </html>
-
