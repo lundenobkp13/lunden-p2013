@@ -34,8 +34,6 @@ import requests as req_lib   # för laget.se HTTP-anrop
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "lunden-obk-p2013-v2-byt-mig")
-APP_USERNAME = os.environ.get("APP_USERNAME", "lunden")
-APP_PASSWORD = os.environ.get("APP_PASSWORD", "obk2013")
 
 # ── Konfiguration ─────────────────────────────────────────────────────────────
 
@@ -47,6 +45,7 @@ LAGETSE_SLUG = os.environ.get("LAGETSE_SLUG", "Lundenobkpf13")   # din laget.se-
 # Synkas via /sync/spelstat (POST) eller redigeras manuellt här som fallback
 SPELSTAT_FALLBACK = [
     # === LATT C (Gron lag) - Varserie 2026 ===
+    {"namn":"Alexander Johansson",     "serie":"latt_c","mal":0,"assist":0,"gult":0,"rott":0,"matcher":2},
     {"namn":"Lionel Chougui Hulle",    "serie":"latt_c","mal":2,"assist":1,"gult":0,"rott":0,"matcher":2},
     {"namn":"William Palicka",         "serie":"latt_c","mal":2,"assist":0,"gult":0,"rott":0,"matcher":3},
     {"namn":"William Darhoff",         "serie":"latt_c","mal":2,"assist":1,"gult":0,"rott":0,"matcher":2},
@@ -57,7 +56,6 @@ SPELSTAT_FALLBACK = [
     {"namn":"Frans Meurling Bigestans","serie":"latt_c","mal":1,"assist":0,"gult":0,"rott":0,"matcher":1},
     {"namn":"Veiron Stickfors",        "serie":"latt_c","mal":0,"assist":2,"gult":0,"rott":0,"matcher":2},
     {"namn":"Holger Weiler",           "serie":"latt_c","mal":0,"assist":1,"gult":0,"rott":0,"matcher":1},
-    {"namn":"Alexander Johansson",     "serie":"latt_c","mal":0,"assist":0,"gult":0,"rott":0,"matcher":2},
     {"namn":"Liam Laveback",           "serie":"latt_c","mal":0,"assist":0,"gult":0,"rott":0,"matcher":1},
     {"namn":"Anton Klasgren",          "serie":"latt_c","mal":0,"assist":0,"gult":0,"rott":0,"matcher":2},
     # === LATT E (Svart lag) - Varserie 2026 ===
@@ -72,6 +70,7 @@ SPELSTAT_FALLBACK = [
     {"namn":"John Wiklund",            "serie":"latt_e","mal":1,"assist":1,"gult":0,"rott":0,"matcher":1},
     {"namn":"El Kadi",                 "serie":"latt_e","mal":0,"assist":1,"gult":0,"rott":0,"matcher":1},
     {"namn":"Veiron Stickfors",        "serie":"latt_e","mal":0,"assist":0,"gult":0,"rott":1,"matcher":2},
+    {"namn":"Elias Rocha",             "serie":"latt_e","mal":0,"assist":0,"gult":0,"rott":0,"matcher":1},
     # === MEDEL A (Vit lag) - Varserie 2026 ===
     {"namn":"Alexander Johansson",     "serie":"medel_a","mal":7,"assist":0,"gult":0,"rott":0,"matcher":4},
     {"namn":"Lionel Chougui Hulle",    "serie":"medel_a","mal":4,"assist":1,"gult":0,"rott":0,"matcher":3},
@@ -115,12 +114,18 @@ SPELSTAT_FALLBACK = [
 ]
 
 SERIER = {
-    "latt_e":  {"etikett": "Lätt E",  "nyckelord": ["lätt", "grupp e"],  "färg": "#a8e063"},
-    "latt_c":  {"etikett": "Lätt C",  "nyckelord": ["lätt", "grupp c"],  "färg": "#7ec8e3"},
-    "medel_a": {"etikett": "Medel A", "nyckelord": ["medel", "grupp a"], "färg": "#f0a868"},
+    "latt_e":   {"etikett": "Lätt E",     "nyckelord": ["lätt", "grupp e"],  "färg": "#a8e063"},
+    "latt_c":   {"etikett": "Lätt C",     "nyckelord": ["lätt", "grupp c"],  "färg": "#7ec8e3"},
+    "medel_a":  {"etikett": "Medel A",    "nyckelord": ["medel", "grupp a"], "färg": "#f0a868"},
+    "fair_play":{"etikett": "Fair Play",  "nyckelord": ["fair play"],        "färg": "#c084fc"},
+    "traning":  {"etikett": "Träning",    "nyckelord": ["träning", "traning","träningsmatch"], "färg": "#94a3b8"},
 }
 
 # Fil för att spara synkad laget.se-data och planeringsdata
+
+# Träningsnärvaro: urval 1 jan 2026 till dagens datum (uppdateras löpande)
+NARVARO_FRAN  = "2026-01-01"  # Fast startdatum
+NARVARO_TILL  = None          # None = använd datetime.now() vid synk
 DATA_FILE     = os.environ.get("DATA_FILE", "lunden_data.json")
 PLANNING_FILE = os.environ.get("PLANNING_FILE", "lunden_planning.json")
 
@@ -314,17 +319,24 @@ def parsea_narvaro_text(text: str) -> dict:
 
 @app.route("/", methods=["GET","POST"])
 def login():
-    if "inloggad" in session:
+    if "fogis_cookies" in session:
         return redirect(url_for("dashboard"))
     if request.method == "POST":
         username = request.form.get("username","").strip()
         password = request.form.get("password","")
-        if username == APP_USERNAME and password == APP_PASSWORD:
-            session["inloggad"] = True
-            session["username"] = username
+        if not FOGIS_AVAILABLE:
+            flash("Fogis-biblioteket är inte installerat (pip install fogis-api-client-timmyBird).")
+            return render_template("login.html")
+        try:
+            client  = FogisApiClient(username=username, password=password)
+            cookies = client.login()
+            session["fogis_cookies"] = cookies
+            session["username"]      = username
             return redirect(url_for("dashboard"))
-        else:
+        except FogisLoginError:
             flash("Fel användarnamn eller lösenord.")
+        except Exception as e:
+            flash(f"Fel: {e}")
     return render_template("login.html")
 
 @app.route("/logout")
@@ -336,12 +348,22 @@ def logout():
 
 @app.route("/dashboard")
 def dashboard():
-    if "inloggad" not in session:
+    if "fogis_cookies" not in session:
         return redirect(url_for("login"))
 
-    # SvFF API ansluts nar nyckeln godkants - tills dess tomma listor
-    alla_matcher = []
-    lunden = []
+    # Fogis-data
+    try:
+        client = FogisApiClient(cookies=session["fogis_cookies"])
+        if not client.validate_cookies():
+            session.clear()
+            flash("Sessionen gick ut – logga in igen.")
+            return redirect(url_for("login"))
+        alla_matcher = client.fetch_matches_list_json()
+    except Exception as e:
+        flash(f"Fogis-fel: {e}")
+        alla_matcher = []
+
+    lunden = [m for m in alla_matcher if är_lunden(m)]
 
     # Per serie
     serie_data = {}
@@ -480,7 +502,7 @@ def bygg_kommande_matcher(serie_data: dict) -> list:
 
 @app.route("/planering/spara", methods=["POST"])
 def spara_planering():
-    if "inloggad" not in session:
+    if "fogis_cookies" not in session:
         return jsonify({"ok": False, "msg": "Inte inloggad"}), 401
     data = request.get_json()
     if not data:
@@ -508,7 +530,7 @@ def sync_narvaro():
     Tar emot närvaro-JSON från Claude-i-Chrome-sessionen och sparar den.
     Payload: {"spelare": [{namn, pct, traning, match, ovrig}], "laget_spelare": [{nummer, namn, position}]}
     """
-    if "inloggad" not in session:
+    if "fogis_cookies" not in session:
         return jsonify({"ok": False, "msg": "Inte inloggad"}), 401
     payload = request.get_json()
     if not payload:
@@ -541,7 +563,7 @@ def sync_trend():
     Tar emot månadsvis närvaro.
     Payload: {"trend": [{namn, månader: [pct|null, ...]}, ...], "månadsLabels": [...]}
     """
-    if "inloggad" not in session:
+    if "fogis_cookies" not in session:
         return jsonify({"ok": False, "msg": "Inte inloggad"}), 401
     payload = request.get_json()
     if not payload:
@@ -559,7 +581,7 @@ def sync_trend():
 @app.route("/api/spelare")
 def api_spelare():
     """Returnerar alla spelares nuvarande matchantal + planerade."""
-    if "inloggad" not in session:
+    if "fogis_cookies" not in session:
         return jsonify([]), 401
     cached   = load_data()
     planning = load_planning()
@@ -589,7 +611,7 @@ def api_spelare():
 @app.route("/sync/fogis", methods=["POST"])
 def sync_fogis():
     """Cachelagrar Fogis spelarlistan."""
-    if "inloggad" not in session:
+    if "fogis_cookies" not in session:
         return jsonify({"ok": False}), 401
     payload = request.get_json()
     cached  = load_data()
