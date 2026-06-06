@@ -512,10 +512,15 @@ def debug_matcher():
         return {"fel": "Ange ?u=användarnamn&p=lösenord i URL:en"}
     try:
         client = FogisApiClient(username=u, password=p)
-        alla = client.fetch_matches_list_json()
-        return {"antal": len(alla), "forsta_3": alla[:3]}
+        cookies = client.login()
+        return {
+            "login_ok": True,
+            "cookies_typ": str(type(cookies)),
+            "cookies_innehall": str(cookies)[:200] if cookies else "tomt",
+            "validate": client.validate_cookies()
+        }
     except Exception as e:
-        return {"fel": str(e)}
+        return {"fel": str(e), "typ": type(e).__name__}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
