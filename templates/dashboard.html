@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Lunden ÃBK P2013</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
+.fpill{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;
+  justify-content:center;font-size:.7rem;font-weight:700}
+.fpill.win{background:rgba(168,224,99,.2);color:var(--win)}
+.fpill.draw{background:rgba(224,200,112,.2);color:var(--draw)}
+.fpill.loss{background:rgba(224,112,112,.2);color:var(--loss)}
+.fpill.none{background:rgba(255,255,255,.06);color:var(--muted)}
+
+/* ââ Goal bar ââ */
+.goalbar{background:var(--gc);border:1px solid var(--border);border-radius:var(--r);
+  padding:11px 14px;margin-bottom:12px}
+.gbrow{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-bottom:7px}
+.gbtrack{height:7px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;display:flex}
+.gbfor{background:var(--lime);height:100%;border-radius:4px 0 0 4px}
+.gbagg{background:var(--loss);height:100%;border-radius:0 4px 4px 0}
+
+/* ââ Match cards ââ */
+.mgroup{font-size:.65rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:10px 0 6px}
+.mc{background:var(--gc);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.mc.upcoming{border-color:rgba(255,255,255,.09);opacity:.72}
+.mdate{min-width:42px;font-size:.7rem;color:var(--muted);line-height:1.3}
+.mteams{flex:1;min-width:0}
+.mteams .home{color:var(--lime)}
+.mteams .team{font-size:.86rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mteams .vs{font-size:.68rem;color:var(--muted);margin:1px 0}
+.mright{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.mscore{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:2px}
+.mscore.win{color:var(--win)}.mscore.draw{color:var(--draw)}.mscore.loss{color:var(--loss)}
+.mscore.upcoming{color:var(--muted);font-size:.72rem;font-family:'DM Sans',sans-serif}
+.vbadge{font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.5px}
+.vbadge.win{background:rgba(168,224,99,.15);color:var(--win)}
+.vbadge.draw{background:rgba(224,200,112,.15);color:var(--draw)}
+.vbadge.loss{background:rgba(224,112,112,.15);color:var(--loss)}
+.vbadge.upcoming{background:rgba(255,255,255,.07);color:var(--muted)}
+
+/* ââ Spelare-tabell ââ */
+.stbl{width:100%;border-collapse:collapse}
+.stbl th{font-size:.62rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);
+  text-align:right;padding:6px 8px;border-bottom:1px solid var(--border)}
+.stbl th:first-child{text-align:left}
+.stbl th:nth-child(2){text-align:left}
+.stbl td{padding:9px 8px;font-size:.83rem;border-bottom:1px solid rgba(255,255,255,.04);text-align:right}
+.stbl td:first-child{font-size:.75rem;color:var(--muted);font-family:'Bebas Neue',sans-serif;font-size:.9rem}
+.stbl td:nth-child(2){text-align:left;font-weight:500}
+.stbl tr:hover td{background:rgba(255,255,255,.03)}
+.sbadge{display:inline-flex;min-width:26px;align-items:center;justify-content:center;
+  padding:2px 7px;border-radius:5px;font-size:.75rem;font-weight:600}
+.sbadge.latt-e{background:rgba(168,224,99,.15);color:var(--lime)}
+.sbadge.latt-c{background:rgba(126,200,227,.15);color:var(--blue)}
+.sbadge.medel-a{background:rgba(240,168,104,.15);color:var(--orange)}
+.sbadge.empty{color:var(--muted)}
+.tot{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--lime2)}
+
+/* ââ NÃ¤rvaro ââ */
+.npct{display:inline-flex;align-items:center;gap:5px;font-size:.82rem}
+.nbar{height:4px;border-radius:2px;background:var(--lime);display:inline-block;vertical-align:middle}
+
+/* ââ Trend-sektion ââ */
+.trend-container{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:14px}
+.trend-tbl{border-collapse:collapse;white-space:nowrap}
+.trend-tbl th{font-size:.62rem;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);
+  padding:6px 10px;border-bottom:1px solid var(--border);text-align:center}
+.trend-tbl th:first-child{text-align:left;min-width:140px}
+.trend-tbl td{padding:8px 10px;font-size:.82rem;border-bottom:1px solid rgba(255,255,255,.04);text-align:center}
+.trend-tbl td:first-child{text-align:left;font-weight:500}
+.tcell{display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:24px;border-radius:5px;font-size:.72rem;font-weight:600}
+.tcell.hi{background:rgba(168,224,99,.2);color:var(--lime)}
+.tcell.mid{background:rgba(224,200,112,.15);color:var(--draw)}
+.tcell.lo{background:rgba(224,112,112,.15);color:var(--loss)}
+.tcell.none{color:var(--muted)}
+
+/* ââ Planeringsverktyg ââ */
+.plan-match{background:var(--gc);border:1px solid var(--border);border-radius:var(--r);
+  margin-bottom:10px;overflow:hidden}
+.plan-head{padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.plan-head:active{background:rgba(255,255,255,.03)}
+.plan-serie-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.plan-title{flex:1;font-size:.88rem;font-weight:500}
+.plan-count{font-size:.72rem;color:var(--muted)}
+.plan-chevron{font-size:.75rem;color:var(--muted);transition:transform .2s}
+.plan-body{display:none;padding:0 14px 14px;border-top:1px solid var(--border)}
+.plan-body.open{display:block}
+
+.plan-info{font-size:.72rem;color:var(--muted);padding:10px 0 12px;line-height:1.5}
+
+/* Spelarpicker */
+.picker-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.picker-btn{padding:8px 10px;border-radius:8px;border:1px solid var(--border);
+  background:rgba(255,255,255,.04);cursor:pointer;text-align:left;
+  -webkit-tap-highlight-color:transparent;transition:all .15s;position:relative}
+.picker-btn.selected{background:rgba(168,224,99,.15);border-color:var(--lime)}
+.picker-btn .pname{font-size:.82rem;font-weight:500;color:var(--text);display:block}
+.picker-btn .pmeta{font-size:.65rem;color:var(--muted);margin-top:2px;display:flex;gap:6px}
+.picker-btn .pbal{font-size:.7rem;font-weight:600;margin-top:3px}
+.picker-btn .pbal.low{color:var(--win)}
+.picker-btn .pbal.mid{color:var(--draw)}
+.picker-btn .pbal.high{color:var(--loss)}
+.picker-btn .pcheck{position:absolute;top:6px;right:8px;font-size:.75rem;color:var(--lime);display:none}
+.picker-btn.selected .pcheck{display:block}
+
+.plan-summary{background:rgba(168,224,99,.06);border:1px solid rgba(168,224,99,.2);
+  border-radius:8px;padding:10px 12px;font-size:.78rem;margin-bottom:10px}
+.plan-summary .sl{display:flex;justify-content:space-between;margin-bottom:2px}
+.plan-summary .sval{color:var(--lime);font-weight:600}
+
+.savebtn{width:100%;padding:11px;background:var(--lime);color:#162b1e;
+  font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;
+  border:none;border-radius:8px;cursor:pointer;transition:all .15s}
+.savebtn:active{background:var(--lime2);transform:scale(.98)}
+.savebtn:disabled{background:rgba(168,224,99,.3);cursor:not-allowed}
+nd:rgba(168,224,99,.12);border:1px solid var(--lime);
+  border-radius:8px;color:var(--lime);font-size:.78rem;font-weight:600;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.synkbtn:active{background:rgba(168,224,99,.25)}
+
+/* ââ Bottom tabbar ââ */
+.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:100;
+  height:calc(var(--tab-h) + var(--safe));padding-bottom:var(--safe);
+  display:flex;background:rgba(20,31,22,.95);backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border)}
+.titem{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;cursor:pointer;color:var(--muted);font-size:.58rem;font-weight:500;
+  letter-spacing:.3px;-webkit-tap-highlight-color:transparent;background:none;border:none;
+  transition:color .15s}
+.titem.active{color:var(--lime)}
+.ticon{font-size:1.1rem;line-height:1}
+
+/* ââ Util ââ */
+.stitle{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;
+  color:var(--lime);margin-bottom:10px}
+.empty{color:var(--muted);font-size:.82rem;padding:20px 0;text-align:center}
+.info{background:rgba(168,224,99,.07);border:1px solid rgba(168,224,99,.2);
+  border-radius:10px;padding:12px 14px;font-size:.78rem;color:var(--muted);
+  line-height:1.6;margin-bottom:12px}
+.info strong{color:var(--lime)}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="hbadge">â½</div>
+  <div class="htxt">
+    <h1>Lunden ÃBK</h1>
+    <p>P2013 Â· VÃ¥r 2026</p>
+  </div>
+  <div class="hright">
+    <span class="upd">{{ uppdaterad }}</span>
+    <a href="/logout" class="logout">Logga ut</a>
+  </div>
+</header>
+
+<!-- Top nav -->
+<nav class="topnav" id="topnav">
+  {% for sid, sd in serie_data.items() %}
+  <button class="tnbtn {% if loop.first %}active{% endif %}"
+          onclick="showSec('{{ sid }}')" id="tn-{{ sid }}">{{ sd.etikett }}</button>
+  {% endfor %}
+  <button class="tnbtn" onclick="showSec('spelare')" id="tn-spelare">Spelare</button>
+  <button class="tnbtn" onclick="showSec('narvaro')" id="tn-narvaro">NÃ¤rvaro</button>
+  <button class="tnbtn" onclick="showSec('planering')" id="tn-planering">Planering</button>
+  <button class="tnbtn" onclick="showSec('admin')" id="tn-admin">â Admin</button>
+</nav>½ {{ sd.stats.gjorda }} gjorda</span>
+      <span>{{ '%+d'|format(sd.stats.skillnad) }}</span>
+      <span style="color:var(--loss)">{{ sd.stats.inslÃ¤ppta }} inslÃ¤ppta</span>
+    </div>
+    <div class="gbtrack">
+      {% if tot %}
+      <div class="gbfor" style="width:{{ (sd.stats.gjorda/tot*100)|int }}%"></div>
+      <div class="gbagg" style="width:{{ (sd.stats.inslÃ¤ppta/tot*100)|int }}%"></div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if spelade_m %}
+  <p class="mgroup">Spelade ({{ spelade_m|length }})</p>
+  {% for m in spelade_m|reverse %}
+  <div class="mc">
+    <div class="mdate">{{ m.datum }}<br><span style="font-size:.62rem">{{ m.tid }}</span></div>
+    <div class="mteams">
+      <div class="team {% if m.hemma %}home{% endif %}">{{ m.hemmalag }}</div>
+      <div class="vs">vs</div>
+      <div class="team {% if not m.hemma %}home{% endif %}">{{ m.bortalag }}</div>
+    </div>
+    <div class="mright">
+      <span class="mscore {{ m.css }}">{{ m.resultat }}</span>
+      <span class="vbadge {{ m.css }}">{{ m.vof }}</span>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% set komm = sd.matcher | rejectattr("spelad") | list %}
+  {% if komm %}
+  <p class="mgroup" style="margin-top:14px">Kommande ({{ komm|length }})</p>
+  {% for m in komm %}
+  <div class="mc upcoming">
+    <div class="mdate">{{ m.datum }}<br><span style="font-size:.62rem">{{ m.tid }}</span></div>
+    <div class="mteams">
+      <div class="team {% if m.hemma %}home{% endif %}">{{ m.hemmalag }}</div>
+      <div class="vs">vs</div>
+      <div class="team {% if not m.hemma %}home{% endif %}">{{ m.bortalag }}</div>
+    </div>
+    <div class="mright">
+      <span class="mscore upcoming">{{ m.tid or 'â' }}</span>
+      <span class="vbadge upcoming">KOMMANDE</span>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if not sd.matcher %}<p class="empty">Inga matcher hittades.</p>{% endif %}
+</section>
+{% endfor %}
+
+<!-- âââ Spelarsektionen (Fogis-protokoll) âââ -->
+</section>
+<section class="section" id="sec-spelare">
+  <p class="stitle">Spelade matcher per spelare</p>
+  <div class="info">Antal gÃ¥nger varje spelare Ã¤r registrerad i matchprotokollet i Fogis, uppdelat per serie.</div>
+
+  {% if alla_spelare %}
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+  <table class="stbl"><thead><tr><th>#</th><th>Spelare</th>
+{% for sid, sinfo in serier.items() %}<th>{{ sinfo.etikett }}</th>{% endfor %}
+<th>Tot</th><th>Narvaro%</th></tr></thead><tbody>
+{% for sp in alla_spelare %}
+<tr><td>{{ sp.nummer or '-' }}</td><td>{{ sp.namn }}</td>
+{% for sid in serier %}
+<td>{% set n = sp.fogis_serier.get(sid, 0) %}
+{% if n > 0 %}<span class="sbadge {{ sid|replace('_','-') }}">{{ n }}</span>
+{% else %}<span class="sbadge empty">-</span>{% endif %}</td>
+{% endfor %}
+<td class="tot">{{ sp.fogis_totalt or '-' }}</td>
+<td>{% if sp.narvaro_pct is not none %}<span class="npct">{{ sp.narvaro_pct }}%</span>
+{% else %}-{% endif %}</td></tr>
+{% endfor %}
+</tbody></table></div>
+  {% else %}
+  <p class="empty">Spelardata laddas nÃ¤r matchprotokoll finns i Fogis.</p>
+  {% endif %}
+</section>
+<section class="section" id="sec-narvaro">
+  <p class="stitle">Narvaro - laget.se</p>
+  {% if synkad %}
+  <div class="info">Synkad <strong>{{ synkad[:16]|replace('T',' ') }}</strong></div>
+  {% else %}
+  <div class="info">Ingen narvarodata synkad annu. Ga till <strong>Admin</strong>-fliken och klicka <strong>Synka narvaro</strong>.</div>
+  {% endif %}
+  {% set har_narvaro = alla_spelare | selectattr("narvaro_pct") | list %}
+  {% if har_narvaro %}
+  <div style="overflow-x:auto">
+  <table class="stbl"><thead><tr><th>#</th><th>Spelare</th><th>%</th><th>Traning</th><th>Match</th></tr></thead>
+<tbody>{% for sp in alla_spelare | sort(attribute='narvaro_pct',reverse=True) %}
+{% if sp.narvaro_pct is not none %}
+<tr><td>{{ sp.nummer or '-' }}</td><td>{{ sp.namn }}</td>
+<td><span style="font-family:'Bebas Neue';font-size:1rem;color:{% if sp.narvaro_pct >= 60 %}var(--win){% elif sp.narvaro_pct >= 40 %}var(--draw){% else %}var(--loss){% endif %}">{{ sp.narvaro_pct }}%</span></td>
+<td>{{ sp.narvaro_traning or '-' }}</td><td>{{ sp.narvaro_match or '-' }}</td></tr>
+{% endif %}{% endfor %}</tbody></table></div>
+  {% endif %}
+</pane></section>eplace('"','\\"') }}',this)"
+                data-namn="{{ sp.namn }}"
+                data-bal="{{ total_bal }}">
+          <span class="pcheck">â</span>
+          <span class="pname">{{ sp.namn }}</span>
+          <span class="pmeta">{% if sp.nummer %}<span>#{{ sp.nummer }}</span>{% endif %}{% if sp.position %}<span>{{ sp.position }}</span>{% endif %}</span>
+          <span class="pbal {% if total_bal <= 2 %}low{% elif total_bal <= 5 %}mid{% else %}high{% endif %}">{{ fogis_count }}+{{ planerade_count }} matcher</span>
+        </button>{% endfor %}
+      </div>
+      <div class="plan-summary" id="sum-{{ km.id }}"><div class="sl"><span>Valda spelare</span><span class="sval" id="cnt-{{ km.id }}">{{ valt_antal }}/11</span></div>
+        <div id="names-{{ km.id }}" style="color:var(--muted);font-size:.72rem">
+          {% if plan.spelare %}{{ plan.spelare|join(', ') }}{% else %}Inga valda annu{% endif %}
+        </div>
+      </div>
+      <button class="savebtn" onclick="sparaPlan('{{ km.id }}','{{ km.serie_id }}','{{ km.serie }}','{{ km.datum }}','{{ km.bortalag if km.hemma else km.hemmalag }}')">Spara uppstallning</button>
+    </div>
+  </div>{% endfor %}
+  {% else %}<p class="empty">Inga kommande matcher hittades i Fogis.</p>{% endif %}
+</pane></section>
+<section class="section" id="sec-admin">
+  <p class="stitle">Administration</p>
+  <div class="admin-card"><div class="admin-title">Narvaro - laget.se</div>
+    <div class="admin-row"><span>Senast synkad</span><span class="val">{% if synkad %}{{ synkad[:16]|replace('T',' ') }}{% else %}Aldrig{% endif %}</span></div>
+    <div class="admin-row"><span>Antal spelare med data</span><span class="val">{{ alla_spelare | selectattr("narvaro_pct") | list | length }}</span></div>
+    <div style="margin-top:10px"><button class="synkbtn" onclick="alert('Kor: hamta narvaro nu - i Claude i Chrome-chatten')">Synka narvaro</button></div>
+  </div>
+  <div class="admin-card"><div class="admin-title">Fogis-koppling</div>
+    <div class="admin-row"><span>Inloggad som</span><span class="val">{{ username }}</span></div>
+    <div class="admin-row"><span>Serier konfigurerade</span><span class="val">{{ serier|length }}</span></div>
+  </div>
+  <div class="admin-card"><div class="admin-title">Planering</div>
+    <div class="admin-row"><span>Sparade uppstallningar</span><span class="val">{{ planning.matcher|length }}</span></div>
+    <div style="margin-top:10px"><button class="synkbtn" onclick="rensaPlanering()" style="border-color:red;color:red">Rensa planering</button></div>
+  </div>
+</section>
+<nav class="tabbar">
+  {% for sid, sd in serie_data.items() %}
+  <button class="titem {% if loop.first %}active{% endif %}" onclick="showSec('{{ sid }}')" id="tb-{{ sid }}"><span class="ticon">â½</span><span>{{ sd.etikett }}</span></button>
+  {% endfor %}
+  <button class="titem" onclick="showSec('spelare')" id="tb-spelare"><span class="ticon">ð</span><span>Spelare</span></button>
+  <button class="titem" onclick="showSec('narvaro')" id="tb-narvaro"><span class="ticon">ð</span><span>Nararo</span></button>
+  <button class="titem" onclick="showSec('planering')" id="tb-planering"><span class="ticon">ð</span><span>Plan</span></button>
+</nav>
+<script>
+const _valda = {};
+function showSec(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tnbtn,.titem').forEach(b => b.classList.remove('active'));
+  const sec = document.getElementById('sec-' + id);
+  if (sec) sec.classList.add('active');
+  const tn = document.getElementById('tn-' + id);
+  if (tn) { tn.classList.add('active'); tn.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
+  const tb = document.getElementById('tb-' + id);
+  if (tb) tb.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function togglePlan(id) {
+  const body = document.getElementById('pb-'+id);
+  const chev = document.getElementById('chev-'+id);
+  const isOpen = body.classList.contains('open');
+  document.querySelectorAll('.plan-body').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('.plan-chevron').forEach(c => c.style.transform='');
+  if (!isOpen) { body.classList.add('open'); chev.style.transform='rotate(180deg)'; }
+}
+function toggleSpelare(matchId,namn,btn) {
+  const s = _valda[matchId] || new Set();
+  _valda[matchId] = s;
+  if (s.has(namn)) { s.delete(namn); btn.classList.remove('selected'); }
+  else { s.add(namn); btn.classList.add('selected'); }
+  uppdateraSummary(matchId);
+}
+function uppdateraSummary(matchId) {
+  const s = _valda[matchId] || new Set();
+  const arr = Array.from(s);
+  const cnt = document.getElementById('cnt-'+matchId);
+  const names = document.getElementById('names-'+matchId);
+  const planHead = document.querySelector('#pm-'+matchId+' .plan-count');
+  if (cnt) cnt.textContent = arr.length+'/11';
+  if (names) names.textContent = arr.length ? arr.join(', ') : 'Inga valda annu';
+  if (planHead) planHead.textContent = arr.length+'/11';
+}
+async function sparaPlan(matchId,serieId,serie,datum,motstandare) {
+  const spelare = Array.from(_valda[matchId] || new Set());
+  const btn = document.querySelector('#pb-'+matchId+' .savebtn');
+  if (btn) { btn.disabled=true; btn.textContent='Sparar...'; }
+  try {
+    const resp = await fetch('/planering/spara',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,serie_id:serieId,serie,datum,motstandare,spelare})});
+    const data = await resp.json();
+    if (btn) { btn.textContent = data.ok ? 'Sparad!' : 'Fel'; }
+    setTimeout(()=>{ if (btn) { btn.disabled=false; btn.textContent='Spara uppstallning'; }},2000);
+  } catch(e) { if (btn) { btn.disabled=false; btn.textContent='Spara uppstallning'; } alert('Fel: '+e); }
+}
+arsync function rensaPlanering() {
+  if (!confirm('Rensa all planering?')) return;
+  await fetch('/planering/spara',{method:'POST',headers:{'nt-Type':'application/json'},
+    body: JSON.stringify({match_id: '__clear__', spelare:[]})
+  });
+  location.reload();
+}
+
+// Initiera summaries vid load
+{% for km in kommande_matcher %}
+_valda['{{ km.id }}'] = new Set({{ (plan.spelare or [])|tojson }});
+uppdateraSummary('{{ km.id }}');
+{% endfor %}
+</script>
+</body>
+</html>
