@@ -510,10 +510,20 @@ def debug_matcher():
         return redirect(url_for("login"))
     try:
         client = FogisApiClient(cookies=session["fogis_cookies"])
+        # Prova att hämta med explicit inloggning istället
         alla = client.fetch_matches_list_json()
         return {"antal": len(alla), "forsta_3": alla[:3]}
     except Exception as e:
-        return {"fel": str(e)}
+        # Prova re-login
+        try:
+            client2 = FogisApiClient(
+                username=request.args.get("u",""),
+                password=request.args.get("p","")
+            )
+            alla2 = client2.fetch_matches_list_json()
+            return {"via_login": True, "antal": len(alla2), "forsta_3": alla2[:3]}
+        except Exception as e2:
+            return {"fel": str(e), "fel2": str(e2)}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
