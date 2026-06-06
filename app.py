@@ -34,14 +34,38 @@ import requests as req_lib   # för laget.se HTTP-anrop
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "lunden-obk-p2013-v2-byt-mig")
+APP_USERNAME = os.environ.get("APP_USERNAME", "lunden")
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "obk2013")
 
 # ── Konfiguration ─────────────────────────────────────────────────────────────
 
-CLUB_NAME = "Lunden"
-
-LAGNAMN = ["Lunden Överas BK Vit", "Lunden Överas BK Gron", "Lunden Överas BK Svart", "Lunden Överas BK"]
-
+CLUB_NAME  = "Lunden"
 LAGETSE_SLUG = os.environ.get("LAGETSE_SLUG", "Lundenobkpf13")   # din laget.se-URL
+
+# ── Spelarstatistik (hämtad från MinFotboll, uppdateras via SvFF API) ────────
+# Format: {namn: {serie_id: {mal, assist, gult, rott, matcher}}}
+# Synkas via /sync/spelstat (POST) eller redigeras manuellt här som fallback
+SPELSTAT_FALLBACK = [
+    # MEDEL A (Vit) – data från MinFotboll
+    {"namn":"Algot Bergman",        "nummer":"27","serie":"medel_a","mal":3,"assist":1,"gult":0,"rott":0,"matcher":3},
+    {"namn":"Anton Klasgren",       "nummer":"26","serie":"medel_a","mal":2,"assist":1,"gult":0,"rott":0,"matcher":3},
+    {"namn":"Lionel Chougui Hulle", "nummer":"32","serie":"medel_a","mal":2,"assist":0,"gult":0,"rott":0,"matcher":3},
+    {"namn":"Adrian Simunovic",     "nummer":"11","serie":"medel_a","mal":2,"assist":1,"gult":0,"rott":0,"matcher":3},
+    {"namn":"Liam Laveback",        "nummer":"9", "serie":"medel_a","mal":1,"assist":2,"gult":0,"rott":0,"matcher":3},
+    {"namn":"William Darhoff",      "nummer":"23","serie":"medel_a","mal":1,"assist":1,"gult":0,"rott":0,"matcher":3},
+    {"namn":"Alexander Johansson",  "nummer":"10","serie":"medel_a","mal":0,"assist":2,"gult":1,"rott":0,"matcher":3},
+    {"namn":"Nathan Lichtneckert",  "nummer":"7", "serie":"medel_a","mal":0,"assist":1,"gult":0,"rott":0,"matcher":3},
+    # LATT E (Svart) – data fran MinFotboll
+    {"namn":"Holger Weiler",        "nummer":"16","serie":"latt_e", "mal":2,"assist":0,"gult":0,"rott":0,"matcher":1},
+    {"namn":"Amadeus Dalerstedt",   "nummer":"35","serie":"latt_e", "mal":1,"assist":0,"gult":0,"rott":0,"matcher":1},
+    {"namn":"Veiron Stickfors",     "nummer":"39","serie":"latt_e", "mal":0,"assist":0,"gult":0,"rott":1,"matcher":1},
+    {"namn":"Patric Bergman",       "nummer":"27","serie":"latt_e", "mal":0,"assist":1,"gult":0,"rott":0,"matcher":1},
+    {"namn":"El Kadi",              "nummer":"34","serie":"latt_e", "mal":0,"assist":1,"gult":0,"rott":0,"matcher":1},
+    # LATT C (Gron) – data fran MinFotboll
+    {"namn":"William Rosberg Palicka","nummer":"22","serie":"latt_c","mal":1,"assist":1,"gult":0,"rott":0,"matcher":1},
+    {"namn":"Igor Simunovic",       "nummer":"11","serie":"latt_c", "mal":1,"assist":0,"gult":0,"rott":0,"matcher":1},
+    {"namn":"Liam Laveback",        "nummer":"9", "serie":"latt_c", "mal":1,"assist":0,"gult":0,"rott":0,"matcher":1},
+]
 
 SERIER = {
     "latt_e":  {"etikett": "Lätt E",  "nyckelord": ["lätt", "grupp e"],  "färg": "#a8e063"},
@@ -243,24 +267,17 @@ def parsea_narvaro_text(text: str) -> dict:
 
 @app.route("/", methods=["GET","POST"])
 def login():
-    if "fogis_cookies" in session:
+    if "inloggad" in session:
         return redirect(url_for("dashboard"))
     if request.method == "POST":
         username = request.form.get("username","").strip()
         password = request.form.get("password","")
-        if not FOGIS_AVAILABLE:
-            flash("Fogis-biblioteket är inte installerat (pip install fogis-api-client-timmyBird).")
-            return render_template("login.html")
-        try:
-            client  = FogisApiClient(username=username, password=password)
-            cookies = client.login()
-            session["fogis_cookies"] = cookies
-            session["username"]      = username
+        if username == APP_USERNAME and password == APP_PASSWORD:
+            session["inloggad"] = True
+            session["username"] = username
             return redirect(url_for("dashboard"))
-        except FogisLoginError:
+        else:
             flash("Fel användarnamn eller lösenord.")
-        except Exception as e:
-            flash(f"Fel: {e}")
     return render_template("login.html")
 
 @app.route("/logout")
@@ -272,22 +289,12 @@ def logout():
 
 @app.route("/dashboard")
 def dashboard():
-    if "fogis_cookies" not in session:
+    if "inloggad" not in session:
         return redirect(url_for("login"))
 
-    # Fogis-data
-    try:
-        client = FogisApiClient(cookies=session["fogis_cookies"])
-        if not client.validate_cookies():
-            session.clear()
-            flash("Sessionen gick ut – logga in igen.")
-            return redirect(url_for("login"))
-        alla_matcher = client.fetch_matches_list_json()
-    except Exception as e:
-        flash(f"Fogis-fel: {e}")
-        alla_matcher = []
-
-    lunden = [m for m in alla_matcher if är_lunden(m)]
+    # SvFF API ansluts nar nyckeln godkants - tills dess tomma listor
+    alla_matcher = []
+    lunden = []
 
     # Per serie
     serie_data = {}
@@ -320,11 +327,13 @@ def dashboard():
     # Planering
     planning = load_planning()
     kommande_matcher = bygg_kommande_matcher(serie_data)
+    spelstat = bygg_spelstat(cached)
 
     return render_template("dashboard.html",
         serie_data=serie_data,
         serier=SERIER,
         alla_spelare=alla_spelare,
+        spelstat=spelstat,
         synkad=synkad,
         planning=planning,
         kommande_matcher=kommande_matcher,
@@ -364,6 +373,43 @@ def slå_ihop_spelare(fogis_spl, laget_narav, laget_spl) -> list:
         ))
     return sorted(resultat, key=lambda x: (x["nummer"] or "99").zfill(3))
 
+def bygg_spelstat(cached_data: dict) -> list:
+    """
+    Bygger samlad spelarstatistik (mal, assist, kort) per spelare totalt + per serie.
+    Kalla fran cached spelstat om tillganglig, annars fallback.
+    """
+    rader = cached_data.get("spelstat", SPELSTAT_FALLBACK)
+    # Aggregera per spelare
+    index = {}
+    for r in rader:
+        namn = r["namn"]
+        serie = r.get("serie","")
+        if namn not in index:
+            index[namn] = {
+                "namn": namn,
+                "nummer": r.get("nummer",""),
+                "serier": {},
+                "mal_tot": 0, "assist_tot": 0,
+                "gult_tot": 0, "rott_tot": 0, "matcher_tot": 0
+            }
+        sp = index[namn]
+        sid = serie
+        if sid:
+            if sid not in sp["serier"]:
+                sp["serier"][sid] = {"mal":0,"assist":0,"gult":0,"rott":0,"matcher":0}
+            sp["serier"][sid]["mal"]     += r.get("mal",0)
+            sp["serier"][sid]["assist"]  += r.get("assist",0)
+            sp["serier"][sid]["gult"]    += r.get("gult",0)
+            sp["serier"][sid]["rott"]    += r.get("rott",0)
+            sp["serier"][sid]["matcher"] += r.get("matcher",0)
+        sp["mal_tot"]     += r.get("mal",0)
+        sp["assist_tot"]  += r.get("assist",0)
+        sp["gult_tot"]    += r.get("gult",0)
+        sp["rott_tot"]    += r.get("rott",0)
+        sp["matcher_tot"] += r.get("matcher",0)
+    # Sortera pa mal totalt
+    return sorted(index.values(), key=lambda x: (-x["mal_tot"], -x["assist_tot"]))
+
 def bygg_kommande_matcher(serie_data: dict) -> list:
     """Returnerar platt lista med kommande matcher från alla serier."""
     matcher = []
@@ -387,7 +433,7 @@ def bygg_kommande_matcher(serie_data: dict) -> list:
 
 @app.route("/planering/spara", methods=["POST"])
 def spara_planering():
-    if "fogis_cookies" not in session:
+    if "inloggad" not in session:
         return jsonify({"ok": False, "msg": "Inte inloggad"}), 401
     data = request.get_json()
     if not data:
@@ -415,7 +461,7 @@ def sync_narvaro():
     Tar emot närvaro-JSON från Claude-i-Chrome-sessionen och sparar den.
     Payload: {"spelare": [{namn, pct, traning, match, ovrig}], "laget_spelare": [{nummer, namn, position}]}
     """
-    if "fogis_cookies" not in session:
+    if "inloggad" not in session:
         return jsonify({"ok": False, "msg": "Inte inloggad"}), 401
     payload = request.get_json()
     if not payload:
@@ -448,7 +494,7 @@ def sync_trend():
     Tar emot månadsvis närvaro.
     Payload: {"trend": [{namn, månader: [pct|null, ...]}, ...], "månadsLabels": [...]}
     """
-    if "fogis_cookies" not in session:
+    if "inloggad" not in session:
         return jsonify({"ok": False, "msg": "Inte inloggad"}), 401
     payload = request.get_json()
     if not payload:
@@ -466,7 +512,7 @@ def sync_trend():
 @app.route("/api/spelare")
 def api_spelare():
     """Returnerar alla spelares nuvarande matchantal + planerade."""
-    if "fogis_cookies" not in session:
+    if "inloggad" not in session:
         return jsonify([]), 401
     cached   = load_data()
     planning = load_planning()
@@ -496,31 +542,13 @@ def api_spelare():
 @app.route("/sync/fogis", methods=["POST"])
 def sync_fogis():
     """Cachelagrar Fogis spelarlistan."""
-    if "fogis_cookies" not in session:
+    if "inloggad" not in session:
         return jsonify({"ok": False}), 401
     payload = request.get_json()
     cached  = load_data()
     cached["fogis_spelare"] = payload.get("spelare", [])
     save_data(cached)
     return jsonify({"ok": True})
-
-@app.route("/debug/matcher")
-def debug_matcher():
-    u = request.args.get("u", "")
-    p = request.args.get("p", "")
-    if not u or not p:
-        return {"fel": "Ange ?u=användarnamn&p=lösenord i URL:en"}
-    try:
-        client = FogisApiClient(username=u, password=p)
-        cookies = client.login()
-        return {
-            "login_ok": True,
-            "cookies_typ": str(type(cookies)),
-            "cookies_innehall": str(cookies)[:200] if cookies else "tomt",
-            "validate": client.validate_cookies()
-        }
-    except Exception as e:
-        return {"fel": str(e), "typ": type(e).__name__}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
